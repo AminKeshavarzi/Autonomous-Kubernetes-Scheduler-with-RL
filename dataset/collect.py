@@ -33,6 +33,7 @@ def collect(func: Callable[[str], Dict], ip:str, results:list, index:int) -> Non
     global stop_threads
     try:
         response = func(ip)  # Call the function
+        print(f"Thread {index} response: {response}")  # Debugging line
         if 'data' in response and 'result' in response['data']:
             if len(response['data']['result']) > 0:
                 result = response['data']['result'][0]
@@ -58,14 +59,16 @@ def generate_data(ips:list) -> list:
         list: the list of telemetry metrics for each workernode. The length of the list is 3 (CPU, memry, disk) times the number of workernodes.
     """    
     global stop_threads
+
+    resources = ['cpu', 'memory']
     # Create a list to store the results
-    results = [None] * (len(ips) * 3)
+    results = [None] * (len(ips) * len(resources))
 
     # Create a thread for each function
     threads = []
-    for i, func in enumerate([get_cpu_usage, get_mem_usage, get_disk_usage]):
-        for j, ip in enumerate(ips):
-            thread = threading.Thread(target=collect, args=(func, ip, results, i*len(ips) + j))
+    for i, ip in enumerate(ips):
+        for j, func in enumerate([get_cpu_usage, get_mem_usage]):
+            thread = threading.Thread(target=collect, args=(func, ip, results, i*len(resources) + j))
             threads.append(thread)
 
     # Start threads
@@ -89,6 +92,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     ips = args.ips
+    print(f"Collecting data from IPs: {ips}")
     end_time = time.time() + args.duration
     try:
         while time.time() < end_time:
